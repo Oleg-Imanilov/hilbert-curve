@@ -1,0 +1,89 @@
+<html>
+
+<body>
+    <input type="range" min=0 max=140 id='rank' value='0' oninput="refresh()" /><span id='rankVal'></span><br />
+    <input type="checkbox" id="showDots" onchange="refresh()" /> Show dots<br/>
+    <canvas id="cnv" width="820" height="820"></canvas>
+
+    <script>
+        const TPL = [[[0, 1, 3], [1, 1, 0], [1, 0, 0], [0, 0, 2]],
+        [[1, 0, 2], [0, 0, 1], [0, 1, 1], [1, 1, 3]],
+        [[1, 0, 1], [1, 1, 2], [0, 1, 2], [0, 0, 0]],
+        [[0, 1, 0], [0, 0, 3], [1, 0, 3], [1, 1, 1]]];
+
+        function fractal(rank, size, dx, dy, dir, chopped=false) {
+            if (rank === 0) { // |_| - shape
+                let arr = TPL[dir].map(p => [dx + p[0] * size, dy + p[1] * size]);
+                if(chopped) { // Add 4 point between each pare of points
+                    const ret = [];
+                    for(j=0;j<3;j++) {
+                        let dx = (arr[j+1][0]-arr[j][0])/5;
+                        let dy = (arr[j+1][1]-arr[j][1])/5;
+                        ret.push(arr[j]);
+                        for(let i=1;i<5;i++) {
+                            ret.push([arr[j][0]+dx*i, arr[j][1]+dy*i]);
+                        }
+                    }
+                    ret.push(arr[3]);
+                    return ret;
+                } else {
+                    return arr;
+                }
+            } else { 
+                const space = size / (Math.pow(2, rank + 1) - 1);
+                const d = (size - space) / 2;
+                const d2 = d + space;
+                let arr = TPL[dir].map((t) => fractal(rank - 1, d, dx + t[0] * d2, dy + t[1] * d2, t[2], chopped));
+                arr = arr.reduce((acc, curr) => {
+                    return acc.concat(curr);
+                }, []);
+                return arr;
+            }
+        }
+    </script>
+
+    <script>
+        var cnv = document.getElementById("cnv");
+        var ctx = cnv.getContext("2d");
+
+        function refresh() {
+            const showDots = document.getElementById('showDots').checked;
+            const rank20 = Number.parseInt(document.getElementById('rank').value);
+            const rank = Math.floor(rank20 / 20);
+            const k = 1 - (rank20 / 20 - rank);
+
+            document.getElementById('rankVal').innerHTML = "" + (rank20 / 20);
+            let arr = [];
+            if (k == 1) {
+                arr = fractal(rank, 800, 10, 10, 3);
+            } else {
+                const arr0 = fractal(rank, 800, 10, 10, 3, true);
+                arr = fractal(rank + 1, 800, 10, 10, 3);
+                arr.forEach((p, ix) => {
+                    p[0] = p[0] + (arr0[ix][0] - p[0]) * k;
+                    p[1] = p[1] + (arr0[ix][1] - p[1]) * k;
+                });
+            }
+
+            ctx.beginPath();
+            ctx.clearRect(0, 0, 820, 820);
+            ctx.lineWidth = 2;
+            ctx.moveTo(arr[0][0], arr[0][1]);
+            for (let i = 1; i < arr.length; i++) {
+                ctx.lineTo(arr[i][0], arr[i][1]);
+            }
+            ctx.stroke();
+            if(showDots) {
+                arr.forEach((p)=>{
+                    ctx.fillStyle = "red";
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                })
+            }
+        }
+        refresh();
+    </script>
+</body>
+
+</html>
